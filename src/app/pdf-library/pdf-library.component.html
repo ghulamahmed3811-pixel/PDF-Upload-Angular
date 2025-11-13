@@ -1,0 +1,116 @@
+<div class="pdf-library-container">
+  <!-- Top Navigation Bar -->
+  <nav class="navbar">
+    <div class="navbar-content">
+      <a class="navbar-brand" routerLink="/">
+        <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+          <path d="M14 2v6h6"/>
+        </svg>
+        <h1 class="navbar-title">PDF Library</h1>
+      </a>
+      <div class="navbar-menu">
+        <a routerLink="/recent" class="nav-link" [class.active]="activeSection === 'recent'">
+          Recent
+        </a>
+        <a routerLink="/about" class="nav-link" [class.active]="activeSection === 'about'">
+          About
+        </a>
+        <button class="upload-button" (click)="triggerFileInput()">
+          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/>
+          </svg>
+          Upload
+        </button>
+        <input 
+          type="file" 
+          #fileInput 
+          (change)="onFileSelected($event)" 
+          style="display: none"
+          accept=".pdf"
+        />
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="content-wrapper">
+      <header class="page-header">
+        <h2 class="page-title">Explore Our Collection</h2>
+        <p class="page-subtitle">Discover valuable resources and documentation to enhance your learning journey</p>
+      </header>
+
+      <!-- PDF Cards Grid -->
+      <section class="info-panel" *ngIf="activeSection === 'recent'">
+        <h3 class="info-title">Recent Uploads</h3>
+        <p class="info-description" *ngIf="recentUploads.length === 0">
+          No PDFs have been uploaded yet. Use the upload button to add your first document.
+        </p>
+        <ul class="recent-list" *ngIf="recentUploads.length > 0">
+          @for (upload of recentUploads | slice:0:5; track upload.id) {
+            <li class="recent-item">
+              <span class="recent-title">{{ upload.title }}</span>
+              <span class="recent-tag">Uploaded</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="info-panel" *ngIf="activeSection === 'about'">
+        <h3 class="info-title">About This Library</h3>
+        <p class="info-description">
+          This library contains a curated collection of PDF guides designed to support learning and day-to-day reference. 
+          You can upload your own documents to keep everything you need for guidance in one place.
+        </p>
+      </section>
+
+      <div class="cards-grid" *ngIf="activeSection !== 'about'">
+        @for (pdf of filteredPdfs; track pdf.id) {
+          <article class="pdf-card">
+            <div class="card-header">
+              <div class="category-badge">
+                {{ pdf.category === 'Uploaded' ? pdf.title : pdf.category }}
+              </div>
+              @if (pdf.category === 'Uploaded') {
+                <button class="delete-button" (click)="openDeleteModal(pdf, $event)" title="Delete">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  </svg>
+                </button>
+              }
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">{{ pdf.title }}</h3>
+              <p class="card-description">{{ pdf.description }}</p>
+            </div>
+            <div class="card-footer">
+              <button class="view-button" (click)="viewPdf(pdf.id)">View PDF</button>
+            </div>
+          </article>
+        }
+      </div>
+    </div>
+  </main>
+</div>
+
+@if (isDeleteModalOpen && pendingDelete) {
+  <div class="modal-backdrop">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+      <div class="modal-header">
+        <h2 class="modal-title" id="deleteModalTitle">Delete PDF?</h2>
+        <button class="modal-close" type="button" (click)="closeDeleteModal()" aria-label="Close delete confirmation">
+          &times;
+        </button>
+      </div>
+      <p class="modal-message">
+        Are you sure you want to delete "<span class="modal-highlight">{{ pendingDelete.title }}</span>" from your library?
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="modal-button cancel" (click)="closeDeleteModal()">Cancel</button>
+        <button type="button" class="modal-button delete" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+}
+
