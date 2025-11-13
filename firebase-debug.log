@@ -1,0 +1,19 @@
+[debug] [2025-11-13T13:21:13.623Z] ----------------------------------------------------------------------
+[debug] [2025-11-13T13:21:13.631Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Ghulam Ahmed\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init
+[debug] [2025-11-13T13:21:13.632Z] CLI Version:   14.24.2
+[debug] [2025-11-13T13:21:13.632Z] Platform:      win32
+[debug] [2025-11-13T13:21:13.632Z] Node Version:  v22.18.0
+[debug] [2025-11-13T13:21:13.633Z] Time:          Thu Nov 13 2025 18:21:13 GMT+0500 (Pakistan Standard Time)
+[debug] [2025-11-13T13:21:13.634Z] ----------------------------------------------------------------------
+[debug] 
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  C:\Users\Ghulam Ahmed\OneDrive\Documents\GitHub\PDF-Upload-Angular
+
