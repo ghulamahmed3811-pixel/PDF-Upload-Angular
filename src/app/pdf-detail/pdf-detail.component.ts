@@ -1,9 +1,11 @@
-import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, Inject, OnInit, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { PdfService, PdfData } from '../pdf.service';
+import { PdfViewerWrapperComponent } from '../pdf-viewer-wrapper/pdf-viewer-wrapper.component';
 
 interface PdfResource {
-  id: number;
+  id: string;
   title: string;
   description: string;
   author: string;
@@ -13,21 +15,32 @@ interface PdfResource {
   fileSize?: string;
   language?: string;
   detailedDescription?: string;
+  url?: string;
+  uploadDate?: string;
 }
 
 @Component({
   selector: 'app-pdf-detail',
-  imports: [CommonModule],
+  imports: [CommonModule, PdfViewerWrapperComponent],
   templateUrl: './pdf-detail.component.html',
   styleUrl: './pdf-detail.component.scss'
 })
 export class PdfDetailComponent implements OnInit {
   pdf: PdfResource | null = null;
+  isLoading = false;
+  error: string | null = null;
+  
+  // PDF Viewer properties
+  pdfSrc: string | Uint8Array | undefined = undefined;
+  page: number = 1;
+  totalPages: number = 0;
+  isPdfLoading: boolean = false;
+  pdfError: string | null = null;
 
-  // Complete PDF data with detailed descriptions
+  // Complete PDF data with detailed descriptions (sample PDFs)
   private pdfDatabase: PdfResource[] = [
     {
-      id: 1,
+      id: '1',
       title: 'Angular Best Practices Guide',
       description: 'A comprehensive guide covering the best practices for building scalable Angular applications. Learn about component architecture, state management, and performance optimization.',
       author: 'John Developer',
@@ -49,7 +62,7 @@ Key Topics Covered:
 This guide includes real-world examples, code snippets, and practical exercises to help you apply what you learn immediately. Whether you're building small applications or large enterprise systems, this guide will help you write better Angular code.`
     },
     {
-      id: 2,
+      id: '2',
       title: 'TypeScript Advanced Patterns',
       description: 'Deep dive into advanced TypeScript patterns and techniques. Master generics, decorators, and type manipulation for professional development.',
       author: 'Sarah Code',
@@ -71,7 +84,7 @@ Advanced Topics:
 This book goes beyond basic TypeScript syntax to explore the language's most powerful features. You'll learn how to leverage the type system to catch errors at compile time, create self-documenting code, and build robust applications that scale.`
     },
     {
-      id: 3,
+      id: '3',
       title: 'SCSS Styling Mastery',
       description: 'Learn modern CSS preprocessing with SCSS. Discover mixins, functions, and advanced styling techniques to create beautiful responsive designs.',
       author: 'Mike Styles',
@@ -94,7 +107,7 @@ What You'll Learn:
 Complete with practical examples, this guide covers everything from basic SCSS concepts to advanced techniques used in production applications. Learn how to write CSS that's easier to maintain, more organized, and more powerful.`
     },
     {
-      id: 4,
+      id: '4',
       title: 'Web Performance Optimization',
       description: 'Complete guide to optimizing web applications. Learn about lazy loading, code splitting, caching strategies, and performance monitoring tools.',
       author: 'Emma Performance',
@@ -117,7 +130,7 @@ Performance Topics:
 This comprehensive guide combines theory with practice, showing you how to measure, analyze, and improve performance. You'll learn how to use Chrome DevTools, Lighthouse, and other tools to identify bottlenecks and implement solutions that make a real difference.`
     },
     {
-      id: 5,
+      id: '5',
       title: 'Modern UI/UX Design Principles',
       description: 'Explore contemporary design principles and user experience patterns. Create intuitive interfaces that users love with proven design methodologies.',
       author: 'David Designer',
@@ -141,7 +154,7 @@ Design Principles:
 This guide is packed with examples, case studies, and practical exercises. Learn from real-world projects and discover how to apply design thinking to solve complex problems. Whether you're designing mobile apps, web applications, or complex enterprise systems, you'll find valuable insights and actionable advice.`
     },
     {
-      id: 6,
+      id: '6',
       title: 'API Design and Integration',
       description: 'Master RESTful API design, GraphQL, and service integration. Learn authentication, error handling, and building robust backend connections.',
       author: 'Lisa Backend',
@@ -166,11 +179,13 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
     }
   ];
 
-  private isBrowser = false;
+  isBrowser = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private pdfService: PdfService,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -179,22 +194,121 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
-      const id = parseInt(idParam, 10);
-      this.pdf = this.pdfDatabase.find(p => p.id === id) || null;
-      
-      // If not found in database, check if it's from uploaded PDFs (stored in localStorage)
-      if (!this.pdf && this.isBrowser) {
-        const uploadedPdfs = localStorage.getItem('uploadedPdfs');
-        if (uploadedPdfs) {
-          const pdfs = JSON.parse(uploadedPdfs);
-          this.pdf = pdfs.find((p: PdfResource) => p.id === id) || null;
-        }
+      // First check if it's a sample PDF (simple string IDs: '1', '2', etc.)
+      this.pdf = this.pdfDatabase.find(p => p.id === idParam) || null;
+      if (this.pdf) {
+        return; // Found in sample database
       }
+
+      // Try to fetch from backend (MongoDB ObjectId format)
+      this.isLoading = true;
+      this.error = null;
+      
+      this.pdfService.getPdfById(idParam).subscribe({
+        next: (pdfData: PdfData) => {
+          console.log('PDF data received:', pdfData);
+          
+          // Convert backend PDF data to PdfResource format
+          // Use direct asset URL - this is what works in the browser (localhost:3000/assets/...)
+          const pdfUrl = this.pdfService.getAbsoluteUrl(pdfData.url);
+          
+          // Set PDF source FIRST - use direct asset URL (works better with iframe)
+          // The direct URL works as shown in the second image (localhost:3000/assets/...)
+          this.pdfSrc = pdfUrl;
+          
+          // Create PDF resource object
+          this.pdf = {
+            id: pdfData.id,
+            title: this.formatTitle(pdfData.originalName.replace(/\.pdf$/i, '')),
+            description: `Uploaded PDF document. File size: ${this.formatFileSize(pdfData.fileSize)}`,
+            author: 'User Upload',
+            pages: 0,
+            category: 'Uploaded',
+            fileSize: this.formatFileSize(pdfData.fileSize),
+            uploadDate: pdfData.uploadDate,
+            url: pdfUrl,
+            detailedDescription: undefined // Uploaded PDFs don't have detailed descriptions
+          };
+          
+          // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+          // This ensures change detection runs in the next cycle
+          setTimeout(() => {
+            // Clear loading state
+            this.isLoading = false;
+            this.error = null;
+            
+            // Force change detection to update UI
+            this.cdr.detectChanges();
+            
+            console.log('PDF loaded successfully:', pdfData.originalName);
+            console.log('PDF URL set to:', this.pdfSrc);
+            console.log('PDF object created:', this.pdf);
+            console.log('isLoading set to:', this.isLoading);
+          }, 0);
+        },
+        error: (err) => {
+          console.error('Error fetching PDF:', err);
+          this.error = 'PDF not found. It may have been deleted or the ID is invalid.';
+          this.isLoading = false;
+          this.pdf = null;
+          this.pdfSrc = undefined;
+        }
+      });
     }
+  }
+
+  formatTitle(title: string): string {
+    // Replace underscores and hyphens with spaces
+    let formatted = title.replace(/[_-]/g, ' ');
+    
+    // Capitalize first letter of each word
+    formatted = formatted.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+    
+    return formatted;
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
 
   goBack(): void {
     this.router.navigate(['/']);
+  }
+
+  // PDF Viewer event handlers
+  onPdfLoadComplete(pdf: any): void {
+    this.totalPages = pdf.numPages;
+    this.isPdfLoading = false;
+    this.pdfError = null;
+  }
+
+  onPdfLoadStart(): void {
+    this.isPdfLoading = true;
+    this.pdfError = null;
+  }
+
+  onPdfError(error: any): void {
+    console.error('PDF load error:', error);
+    this.isPdfLoading = false;
+    this.pdfError = 'Failed to load PDF. Please try again or use the "View PDF" link to open in a new tab.';
+  }
+
+  nextPage(): void {
+    if (this.page < this.totalPages) {
+      this.page++;
+    }
+  }
+
+  previousPage(): void {
+    if (this.page > 1) {
+      this.page--;
+    }
   }
 }
 

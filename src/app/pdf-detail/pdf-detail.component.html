@@ -28,10 +28,53 @@
         </div>
         <h1 class="pdf-title">{{ pdf.title }}</h1>
         <p class="pdf-subtitle">{{ pdf.description }}</p>
-        
-        
 
       </header>
+
+      <!-- PDF Viewer Section -->
+      @if (pdf && pdf.url) {
+        <section class="pdf-viewer-section">
+          <div class="pdf-viewer-header">
+            <h2 class="content-heading" style="margin: 0;">PDF Viewer</h2>
+            @if (totalPages > 0) {
+              <div class="pdf-controls">
+                <button 
+                  (click)="previousPage()" 
+                  [disabled]="page <= 1"
+                  class="page-button"
+                  [class.disabled]="page <= 1">
+                  Previous
+                </button>
+                <span class="page-indicator">Page {{ page }} of {{ totalPages }}</span>
+                <button 
+                  (click)="nextPage()" 
+                  [disabled]="page >= totalPages"
+                  class="page-button"
+                  [class.disabled]="page >= totalPages">
+                  Next
+                </button>
+              </div>
+            }
+          </div>
+          
+          @if (pdfSrc) {
+            <app-pdf-viewer-wrapper
+              [pdfSrc]="pdfSrc"
+              [page]="page"
+              [totalPages]="totalPages"
+              [isPdfLoading]="isPdfLoading"
+              [pdfError]="pdfError"
+              [onLoadComplete]="onPdfLoadComplete.bind(this)"
+              [onLoadStart]="onPdfLoadStart.bind(this)"
+              [onError]="onPdfError.bind(this)">
+            </app-pdf-viewer-wrapper>
+          } @else {
+            <div style="text-align: center; padding: 3rem;">
+              <p>Preparing PDF viewer...</p>
+            </div>
+          }
+        </section>
+      }
 
       <!-- Detailed Description -->
       <section class="pdf-content">
@@ -80,8 +123,23 @@
   </main>
 </div>
 
+<!-- Loading State -->
+@if (isLoading && !pdf) {
+  <div class="loading-container" style="text-align: center; padding: 4rem;">
+    <h2>Loading PDF...</h2>
+    <p>Please wait while we fetch the PDF details.</p>
+  </div>
+}
+
+<!-- Error Message -->
+<div class="error-container" *ngIf="error && !isLoading" style="text-align: center; padding: 4rem;">
+  <h2>Error</h2>
+  <p style="color: #c33;">{{ error }}</p>
+  <button class="primary-button" (click)="goBack()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Return to Library</button>
+</div>
+
 <!-- Not Found Message -->
-<div class="not-found" *ngIf="!pdf">
+<div class="not-found" *ngIf="!pdf && !isLoading && !error">
   <h2>PDF Not Found</h2>
   <p>The requested PDF resource could not be found.</p>
   <button class="primary-button" (click)="goBack()">Return to Library</button>
