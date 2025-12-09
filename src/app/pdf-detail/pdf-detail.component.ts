@@ -197,6 +197,13 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
       // First check if it's a sample PDF (simple string IDs: '1', '2', etc.)
       this.pdf = this.pdfDatabase.find(p => p.id === idParam) || null;
       if (this.pdf) {
+        // For sample PDFs, set isLoading to false and ensure pdfSrc is set if needed
+        this.isLoading = false;
+        this.error = null;
+        // Sample PDFs might not have url, so pdfSrc can remain undefined
+        if (this.pdf.url) {
+          this.pdfSrc = this.pdf.url;
+        }
         return; // Found in sample database
       }
 
@@ -212,27 +219,26 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
           // Use direct asset URL - this is what works in the browser (localhost:3000/assets/...)
           const pdfUrl = this.pdfService.getAbsoluteUrl(pdfData.url);
           
-          // Set PDF source FIRST - use direct asset URL (works better with iframe)
-          // The direct URL works as shown in the second image (localhost:3000/assets/...)
-          this.pdfSrc = pdfUrl;
-          
-          // Create PDF resource object
-          this.pdf = {
-            id: pdfData.id,
-            title: this.formatTitle(pdfData.originalName.replace(/\.pdf$/i, '')),
-            description: `Uploaded PDF document. File size: ${this.formatFileSize(pdfData.fileSize)}`,
-            author: 'User Upload',
-            pages: 0,
-            category: 'Uploaded',
-            fileSize: this.formatFileSize(pdfData.fileSize),
-            uploadDate: pdfData.uploadDate,
-            url: pdfUrl,
-            detailedDescription: undefined // Uploaded PDFs don't have detailed descriptions
-          };
-          
           // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
-          // This ensures change detection runs in the next cycle
+          // Set all state changes together in the next change detection cycle
           setTimeout(() => {
+            // Set PDF source - use direct asset URL (works better with iframe)
+            this.pdfSrc = pdfUrl;
+            
+            // Create PDF resource object
+            this.pdf = {
+              id: pdfData.id,
+              title: this.formatTitle(pdfData.originalName.replace(/\.pdf$/i, '')),
+              description: `Uploaded PDF document. File size: ${this.formatFileSize(pdfData.fileSize)}`,
+              author: 'User Upload',
+              pages: 0,
+              category: 'Uploaded',
+              fileSize: this.formatFileSize(pdfData.fileSize),
+              uploadDate: pdfData.uploadDate,
+              url: pdfUrl,
+              detailedDescription: undefined // Uploaded PDFs don't have detailed descriptions
+            };
+            
             // Clear loading state
             this.isLoading = false;
             this.error = null;
@@ -248,10 +254,14 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
         },
         error: (err) => {
           console.error('Error fetching PDF:', err);
-          this.error = 'PDF not found. It may have been deleted or the ID is invalid.';
-          this.isLoading = false;
-          this.pdf = null;
-          this.pdfSrc = undefined;
+          // Use setTimeout for error state changes too
+          setTimeout(() => {
+            this.error = 'PDF not found. It may have been deleted or the ID is invalid.';
+            this.isLoading = false;
+            this.pdf = null;
+            this.pdfSrc = undefined;
+            this.cdr.detectChanges();
+          }, 0);
         }
       });
     }
@@ -278,6 +288,17 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
   }
 
   goBack(): void {
+    // Check if we came from /admin route and navigate back to /admin
+    if (this.isBrowser) {
+      const fromAdmin = sessionStorage.getItem('fromAdmin') === 'true';
+      const onAdminRoute = sessionStorage.getItem('onAdminRoute') === 'true';
+      
+      if (fromAdmin || onAdminRoute) {
+        sessionStorage.removeItem('fromAdmin'); // Clear the flag
+        this.router.navigate(['/admin']);
+        return;
+      }
+    }
     this.router.navigate(['/']);
   }
 

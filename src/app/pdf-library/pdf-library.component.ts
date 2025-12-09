@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { filter, finalize } from 'rxjs/operators';
 import { PdfService, PdfData } from '../pdf.service';
+import { AdminService } from '../admin.service';
 
 interface PdfResource {
   id: string;
@@ -34,33 +35,107 @@ export class PdfLibraryComponent implements OnInit {
   isUploading = false;
   error: string | null = null;
 
+
+  activeSection: 'library' | 'recent' | 'about' = 'library';
+  pdfResources: PdfResource[] = []; // Initialize as empty array, will be populated by loadPdfs()
+  isAdmin = false; // Admin status
+
   constructor(
     private router: Router,
     private pdfService: PdfService,
     private cdr: ChangeDetectorRef,
+    private adminService: AdminService,
     @Inject(PLATFORM_ID) platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
-  activeSection: 'library' | 'recent' | 'about' = 'library';
-  pdfResources: PdfResource[] = []; // Initialize as empty array, will be populated by loadPdfs()
-
   ngOnInit(): void {
+    // Subscribe to admin status changes first
+    this.adminService.isAdmin$.subscribe(isAdmin => {
+      this.isAdmin = isAdmin;
+      this.cdr.detectChanges();
+      console.log('Admin status changed via subscription:', isAdmin);
+    });
+
+    // Check admin status from URL - set admin status if on /admin route
+    this.checkAdminAccess();
+
     this.loadPdfs();
     this.updateSectionFromUrl(this.router.url);
 
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
+        console.log('Navigation event, URL:', event.urlAfterRedirects);
+        this.checkAdminAccess(); // Re-check admin access on navigation
         this.updateSectionFromUrl(event.urlAfterRedirects);
         // Reload PDFs when navigating back to library (from detail page or other routes)
         const url = event.urlAfterRedirects.split('?')[0]; // Remove query params
-        if (url === '/' || url === '/recent' || url === '/about') {
+        if (url === '/' || url === '/recent' || url === '/about' || url === '/admin') {
           console.log('Navigating to library route, reloading PDFs...');
           this.loadPdfs();
         }
       });
+  }
+
+  /**
+   * Check if current URL contains admin key and set admin status
+   * Admin buttons should ONLY be visible when on /admin route
+   * When navigating away from /admin, admin buttons should disappear
+   */
+  private checkAdminAccess(): void {
+    const currentUrl = this.router.url;
+    console.log('Checking admin access for URL:', currentUrl);
+    
+    // If on /admin route, authenticate with backend and set admin status
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      console.log('Admin route detected, authenticating with backend...');
+      
+      // Call backend to authenticate admin
+      this.pdfService.authenticateAdmin('admin').subscribe({
+        next: (response) => {
+          console.log('✅ Backend admin authentication successful');
+          this.adminService.setAdminStatus('admin');
+          // Store flag that we're on admin route (for navigation from PDF detail)
+          if (this.isBrowser) {
+            sessionStorage.setItem('onAdminRoute', 'true');
+          }
+        },
+        error: (err) => {
+          console.error('❌ Backend admin authentication failed:', err);
+          // Clear admin status on authentication failure
+          this.adminService.clearAdminStatus();
+          this.pdfService.clearAdminToken();
+          this.error = 'Admin authentication failed. Please check your admin key.';
+        }
+      });
+      return;
+    }
+    
+    // For all other routes, clear admin status (hide admin buttons)
+    // This ensures admin buttons only appear when on /admin route
+    const currentStatus = this.adminService.getIsAdmin();
+    if (currentStatus) {
+      console.log('Not on admin route, clearing admin status...');
+      this.adminService.clearAdminStatus();
+      // Clear admin token from backend session
+      this.pdfService.clearAdminToken();
+    }
+    
+    // Clear the admin route flag
+    if (this.isBrowser) {
+      sessionStorage.removeItem('onAdminRoute');
+    }
+    
+    const adminStatus = this.adminService.getIsAdmin();
+    console.log('Current route:', currentUrl, '- Final admin status:', adminStatus);
+    
+    // Ensure local state matches (subscription should handle this automatically)
+    if (this.isAdmin !== adminStatus) {
+      this.isAdmin = adminStatus;
+      this.cdr.detectChanges();
+    }
   }
 
   loadPdfs(): void {
@@ -225,14 +300,95 @@ export class PdfLibraryComponent implements OnInit {
   }
 
   viewPdf(id: string): void {
+    // If on /admin route, preserve it when navigating to PDF detail
+    const currentUrl = this.router.url;
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      // Set flag so PDF detail knows to navigate back to /admin
+      if (this.isBrowser) {
+        sessionStorage.setItem('fromAdmin', 'true');
+      }
+    }
     this.router.navigate(['/pdf', id]);
   }
 
+  /**
+   * Get the home route - preserve /admin if currently on admin route
+   */
+  getHomeRoute(): string {
+    const currentUrl = this.router.url;
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      return '/admin';
+    }
+    return '/';
+  }
+
+  /**
+   * Get the recent route - preserve /admin if currently on admin route
+   */
+  getRecentRoute(): string {
+    const currentUrl = this.router.url;
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      return '/admin';
+    }
+    return '/recent';
+  }
+
+  /**
+   * Get the about route - preserve /admin if currently on admin route
+   */
+  getAboutRoute(): string {
+    const currentUrl = this.router.url;
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      return '/admin';
+    }
+    return '/about';
+  }
+
+  /**
+   * Navigate to home, preserving admin route if applicable
+   */
+  navigateHome(event: Event): void {
+    event.preventDefault();
+    const route = this.getHomeRoute();
+    this.router.navigate([route]);
+  }
+
+  /**
+   * Navigate to a section, preserving admin route if applicable
+   */
+  navigateToSection(section: 'recent' | 'about', event: Event): void {
+    event.preventDefault();
+    const currentUrl = this.router.url;
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      // Stay on /admin route, just update the section
+      this.updateSectionFromUrl('/admin');
+      this.activeSection = section;
+      this.cdr.detectChanges();
+    } else {
+      // Navigate to the section route
+      const route = section === 'recent' ? '/recent' : '/about';
+      this.router.navigate([route]);
+    }
+  }
+
   triggerFileInput(): void {
+    // Check admin access before allowing upload
+    if (!this.isAdmin) {
+      this.error = 'You do not have permission to upload PDFs. Admin access required.';
+      return;
+    }
     this.fileInput.nativeElement.click();
   }
 
   onFileSelected(event: Event): void {
+    // Check admin access before processing upload
+    if (!this.isAdmin) {
+      this.error = 'You do not have permission to upload PDFs. Admin access required.';
+      const input = event.target as HTMLInputElement;
+      input.value = '';
+      return;
+    }
+
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
@@ -383,6 +539,11 @@ export class PdfLibraryComponent implements OnInit {
   }
 
   openDeleteModal(pdf: PdfResource, event: Event): void {
+    // Check admin access before allowing delete
+    if (!this.isAdmin) {
+      this.error = 'You do not have permission to delete PDFs. Admin access required.';
+      return;
+    }
     event.stopPropagation();
     this.pendingDelete = pdf;
     this.isDeleteModalOpen = true;
@@ -402,6 +563,13 @@ export class PdfLibraryComponent implements OnInit {
   }
 
   confirmDelete(): void {
+    // Check admin access before allowing delete
+    if (!this.isAdmin) {
+      this.error = 'You do not have permission to delete PDFs. Admin access required.';
+      this.closeDeleteModal();
+      return;
+    }
+
     if (!this.pendingDelete) {
       return;
     }

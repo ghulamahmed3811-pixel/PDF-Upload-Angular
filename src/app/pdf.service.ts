@@ -27,15 +27,84 @@ export interface PdfListResponse {
 export class PdfService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:3000/api'; // Backend API URL
+  private adminToken: string | null = null; // Store admin session token
 
   /**
-   * Upload a PDF file to the backend
+   * Authenticate as admin with the backend
+   */
+  authenticateAdmin(adminKey: string): Observable<{ success: boolean; sessionToken: string; expiresAt: number }> {
+    return this.http.post<{ success: boolean; sessionToken: string; expiresAt: number }>(
+      `${this.apiUrl}/admin/auth`,
+      { adminKey }
+    ).pipe(
+      map(response => {
+        // Store the session token
+        this.adminToken = response.sessionToken;
+        // Also store in sessionStorage for persistence
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('adminToken', response.sessionToken);
+          sessionStorage.setItem('adminTokenExpires', response.expiresAt.toString());
+        }
+        return response;
+      })
+    );
+  }
+
+  /**
+   * Get stored admin token
+   */
+  getAdminToken(): string | null {
+    if (!this.adminToken && typeof window !== 'undefined') {
+      // Try to restore from sessionStorage
+      const storedToken = sessionStorage.getItem('adminToken');
+      const expiresAt = sessionStorage.getItem('adminTokenExpires');
+      
+      if (storedToken && expiresAt) {
+        // Check if token is still valid
+        if (Date.now() < parseInt(expiresAt)) {
+          this.adminToken = storedToken;
+        } else {
+          // Token expired, clear it
+          sessionStorage.removeItem('adminToken');
+          sessionStorage.removeItem('adminTokenExpires');
+        }
+      }
+    }
+    return this.adminToken;
+  }
+
+  /**
+   * Clear admin token
+   */
+  clearAdminToken(): void {
+    this.adminToken = null;
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('adminToken');
+      sessionStorage.removeItem('adminTokenExpires');
+    }
+  }
+
+  /**
+   * Upload a PDF file to the backend (requires admin authentication)
    */
   uploadPdf(file: File): Observable<PdfData> {
     const formData = new FormData();
     formData.append('pdf', file);
+    
+    const token = this.getAdminToken();
+    if (!token) {
+      throw new Error('Admin authentication required');
+    }
 
-    return this.http.post<PdfUploadResponse>(`${this.apiUrl}/upload-pdf`, formData).pipe(
+    return this.http.post<PdfUploadResponse>(
+      `${this.apiUrl}/upload-pdf`,
+      formData,
+      {
+        headers: {
+          'X-Admin-Token': token
+        }
+      }
+    ).pipe(
       map(response => response.data)
     );
   }
@@ -64,10 +133,22 @@ export class PdfService {
   }
 
   /**
-   * Delete a PDF by ID
+   * Delete a PDF by ID (requires admin authentication)
    */
   deletePdf(id: string): Observable<{ message: string; id: string }> {
-    return this.http.delete<{ message: string; id: string }>(`${this.apiUrl}/pdfs/${id}`);
+    const token = this.getAdminToken();
+    if (!token) {
+      throw new Error('Admin authentication required');
+    }
+
+    return this.http.delete<{ message: string; id: string }>(
+      `${this.apiUrl}/pdfs/${id}`,
+      {
+        headers: {
+          'X-Admin-Token': token
+        }
+      }
+    );
   }
 
   /**

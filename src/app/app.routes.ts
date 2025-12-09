@@ -6,6 +6,7 @@ export const routes: Routes = [
   { path: '', component: PdfLibraryComponent, pathMatch: 'full' },
   { path: 'recent', component: PdfLibraryComponent },
   { path: 'about', component: PdfLibraryComponent },
+  { path: 'admin', component: PdfLibraryComponent }, // Admin route - component will handle redirect
   { path: 'pdf/:id', component: PdfDetailComponent },
   { path: '**', redirectTo: '' }
 ];
