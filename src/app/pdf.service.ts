@@ -26,7 +26,7 @@ export interface PdfListResponse {
 })
 export class PdfService {
   private http = inject(HttpClient);
-  private apiUrl = 'https://pdf-upload-backend-lemon.vercel.app//api'; // Backend API URL
+  private apiUrl = 'https://pdf-upload-backend-lemon.vercel.app/api'; // Backend API URL
   private adminToken: string | null = null; // Store admin session token
 
   /**
