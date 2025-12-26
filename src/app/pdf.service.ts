@@ -26,7 +26,7 @@ export interface PdfListResponse {
 })
 export class PdfService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api'; // Backend API URL
+  private apiUrl = 'https://pdf-upload-backend-theta.vercel.app/api'; // Backend API URL
   private adminToken: string | null = null; // Store admin session token
 
   /**
@@ -155,12 +155,17 @@ export class PdfService {
    * Convert relative URL to absolute URL
    */
   getAbsoluteUrl(relativeUrl: string): string {
+    // If already absolute (starts with http/https), return as-is
     if (relativeUrl.startsWith('http')) {
       return relativeUrl;
     }
-    // Backend URLs like /assets/filename.pdf need to be converted to full URLs
+    // Backend proxy URLs like /api/pdfs/:id/view need to be converted to full URLs
+    if (relativeUrl.startsWith('/api/')) {
+      return `${this.apiUrl}${relativeUrl.replace(/^\/api/, '')}`;
+    }
+    // Legacy asset URLs (should not be used with Cloudinary, but keep for compatibility)
     if (relativeUrl.startsWith('/assets/')) {
-      return `http://localhost:3000${relativeUrl}`;
+      return `${this.apiUrl}${relativeUrl}`;
     }
     return relativeUrl;
   }
