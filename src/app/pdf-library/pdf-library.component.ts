@@ -313,8 +313,17 @@ export class PdfLibraryComponent implements OnInit {
 
   /**
    * Get the home route - preserve /admin if currently on admin route
+   * Note: Admin mode uses sessionStorage flag because admin guard redirects /admin to /
    */
   getHomeRoute(): string {
+    // Check if we're in admin mode via sessionStorage (more reliable than URL check)
+    if (this.isBrowser) {
+      const onAdminRoute = sessionStorage.getItem('onAdminRoute') === 'true';
+      if (onAdminRoute) {
+        return '/admin';
+      }
+    }
+    // Also check URL as fallback
     const currentUrl = this.router.url;
     if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
       return '/admin';
@@ -349,8 +358,22 @@ export class PdfLibraryComponent implements OnInit {
    */
   navigateHome(event: Event): void {
     event.preventDefault();
-    const route = this.getHomeRoute();
-    this.router.navigate([route]);
+    // Check sessionStorage first (more reliable for admin mode detection)
+    if (this.isBrowser) {
+      const onAdminRoute = sessionStorage.getItem('onAdminRoute') === 'true';
+      if (onAdminRoute) {
+        this.router.navigate(['/admin']);
+        return;
+      }
+    }
+    // Fallback to URL check
+    const currentUrl = this.router.url;
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      this.router.navigate(['/admin']);
+      return;
+    }
+    // Default to home page
+    this.router.navigate(['/']);
   }
 
   /**
