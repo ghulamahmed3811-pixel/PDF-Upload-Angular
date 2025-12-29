@@ -358,22 +358,39 @@ export class PdfLibraryComponent implements OnInit {
    */
   navigateHome(event: Event): void {
     event.preventDefault();
+    event.stopPropagation();
+    
     // Check sessionStorage first (more reliable for admin mode detection)
     if (this.isBrowser) {
       const onAdminRoute = sessionStorage.getItem('onAdminRoute') === 'true';
       if (onAdminRoute) {
-        this.router.navigate(['/admin']);
+        console.log('Navigating to /admin (admin mode detected)');
+        this.router.navigate(['/admin']).then(() => {
+          this.updateSectionFromUrl('/');
+          this.activeSection = 'library';
+        });
         return;
       }
     }
+    
     // Fallback to URL check
     const currentUrl = this.router.url;
     if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
-      this.router.navigate(['/admin']);
+      console.log('Navigating to /admin (URL check)');
+      this.router.navigate(['/admin']).then(() => {
+        this.updateSectionFromUrl('/');
+        this.activeSection = 'library';
+      });
       return;
     }
+    
     // Default to home page
-    this.router.navigate(['/']);
+    console.log('Navigating to / (home page)');
+    this.router.navigate(['/']).then(() => {
+      this.updateSectionFromUrl('/');
+      this.activeSection = 'library';
+      this.cdr.detectChanges();
+    });
   }
 
   /**
