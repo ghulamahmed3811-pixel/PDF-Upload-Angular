@@ -304,9 +304,21 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
 
   /**
    * Navigate to home page when clicking PDF Library icon
+   * Preserves admin route if coming from /admin
    */
   navigateHome(event: Event): void {
     event.preventDefault();
+    // Check if we came from /admin route and navigate back to /admin
+    if (this.isBrowser) {
+      const fromAdmin = sessionStorage.getItem('fromAdmin') === 'true';
+      const onAdminRoute = sessionStorage.getItem('onAdminRoute') === 'true';
+      
+      if (fromAdmin || onAdminRoute) {
+        sessionStorage.removeItem('fromAdmin'); // Clear the flag
+        this.router.navigate(['/admin']);
+        return;
+      }
+    }
     this.router.navigate(['/']);
   }
 

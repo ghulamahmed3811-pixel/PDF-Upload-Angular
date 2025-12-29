@@ -312,9 +312,13 @@ export class PdfLibraryComponent implements OnInit {
   }
 
   /**
-   * Get the home route - always return '/' for PDF Library icon
+   * Get the home route - preserve /admin if currently on admin route
    */
   getHomeRoute(): string {
+    const currentUrl = this.router.url;
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+      return '/admin';
+    }
     return '/';
   }
 
@@ -341,11 +345,12 @@ export class PdfLibraryComponent implements OnInit {
   }
 
   /**
-   * Navigate to home page (always '/')
+   * Navigate to home page - preserve /admin if currently on admin route
    */
   navigateHome(event: Event): void {
     event.preventDefault();
-    this.router.navigate(['/']);
+    const route = this.getHomeRoute();
+    this.router.navigate([route]);
   }
 
   /**
