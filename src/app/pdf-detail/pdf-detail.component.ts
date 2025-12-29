@@ -1,6 +1,6 @@
 import { Component, Inject, OnInit, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { PdfService, PdfData } from '../pdf.service';
 import { PdfViewerWrapperComponent } from '../pdf-viewer-wrapper/pdf-viewer-wrapper.component';
 
@@ -21,7 +21,7 @@ interface PdfResource {
 
 @Component({
   selector: 'app-pdf-detail',
-  imports: [CommonModule, PdfViewerWrapperComponent],
+  imports: [CommonModule, RouterModule, PdfViewerWrapperComponent],
   templateUrl: './pdf-detail.component.html',
   styleUrl: './pdf-detail.component.scss'
 })
@@ -299,6 +299,14 @@ Learn how to design APIs that are intuitive, consistent, and easy to use. This g
         return;
       }
     }
+    this.router.navigate(['/']);
+  }
+
+  /**
+   * Navigate to home page when clicking PDF Library icon
+   */
+  navigateHome(event: Event): void {
+    event.preventDefault();
     this.router.navigate(['/']);
   }
 
