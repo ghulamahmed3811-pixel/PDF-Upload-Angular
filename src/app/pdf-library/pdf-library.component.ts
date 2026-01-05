@@ -88,8 +88,11 @@ export class PdfLibraryComponent implements OnInit {
     const currentUrl = this.router.url;
     console.log('Checking admin access for URL:', currentUrl);
     
-    // If on /admin route, authenticate with backend and set admin status
-    if (currentUrl === '/admin' || currentUrl.startsWith('/admin')) {
+    // Check if we're in admin mode via sessionStorage (more reliable than URL check due to guard redirect)
+    const onAdminRoute = this.isBrowser && sessionStorage.getItem('onAdminRoute') === 'true';
+    
+    // If on /admin route or admin mode is active, authenticate with backend and set admin status
+    if (currentUrl === '/admin' || currentUrl.startsWith('/admin') || onAdminRoute) {
       console.log('Admin route detected, authenticating with backend...');
       
       // Call backend to authenticate admin
@@ -107,7 +110,11 @@ export class PdfLibraryComponent implements OnInit {
           // Clear admin status on authentication failure
           this.adminService.clearAdminStatus();
           this.pdfService.clearAdminToken();
-          this.error = 'Admin authentication failed. Please check your admin key.';
+          // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+          setTimeout(() => {
+            this.error = 'Admin authentication failed. Please check your admin key.';
+            this.cdr.detectChanges();
+          }, 0);
         }
       });
       return;
@@ -234,9 +241,15 @@ export class PdfLibraryComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading PDFs:', err);
-        this.error = 'Failed to load PDFs. Please check if the backend server is running.';
         this.isLoading = false;
-        this.cdr.detectChanges(); // Force UI update
+        // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => {
+          // Only set error if there's no admin auth error already
+          if (!this.error || !this.error.includes('Admin authentication')) {
+            this.error = 'Failed to load PDFs. Please check if the backend server is running.';
+          }
+          this.cdr.detectChanges();
+        }, 0);
         
         // Preserve any uploaded PDFs that were added immediately
         const existingUploadedPdfs = this.pdfResources.filter(p => p.category === 'Uploaded');

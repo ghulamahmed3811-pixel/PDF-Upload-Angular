@@ -111,9 +111,13 @@ export class PdfService {
 
   /**
    * Get all PDFs from the backend
+   * Adds cache-busting timestamp to ensure fresh data on every request
    */
   getAllPdfs(): Observable<PdfData[]> {
-    return this.http.get<PdfListResponse>(`${this.apiUrl}/pdfs`).pipe(
+    // Add timestamp query parameter to bust cache and ensure fresh data on every call
+    // This makes each URL unique, preventing browser/proxy caching
+    const timestamp = Date.now();
+    return this.http.get<PdfListResponse>(`${this.apiUrl}/pdfs?t=${timestamp}`).pipe(
       map(response => response.pdfs)
     );
   }
