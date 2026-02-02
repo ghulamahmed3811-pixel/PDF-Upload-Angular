@@ -1,7 +1,30 @@
+/* Shared primary button - used in error container and not-found */
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--brand-gradient);
+  color: #ffffff;
+  border: none;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px var(--shadow-brand, rgba(99, 102, 241, 0.35));
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px var(--shadow-brand, rgba(99, 102, 241, 0.45));
+    background: var(--brand-gradient-reverse);
+  }
+}
+
 .pdf-detail-container {
   min-height: 100vh;
-  background-color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg-page, #fafaf9);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   margin: 0;
   padding: 0;
 }
@@ -10,23 +33,23 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: transparent;
-  border: 2px solid #ffffff;
-  color: #ffffff;
-  padding: 0.625rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.938rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--nav-text, #f8fafc);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm, 8px);
+  font-weight: 500;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    transform: translateX(-4px);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
   }
 
   &:active {
-    transform: translateX(-2px);
+    transform: scale(0.98);
   }
 }
 
@@ -37,14 +60,14 @@
 
 // Main Content Styles
 .main-content {
-  background-color: #ffffff;
-  min-height: calc(100vh - 80px);
+  background-color: var(--bg-page, #fafaf9);
+  min-height: calc(100vh - 72px);
 }
 
 .content-wrapper {
-  max-width: 1000px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 3rem 2rem;
+  padding: 2.5rem 2rem;
 }
 
 // PDF Header
@@ -54,20 +77,21 @@
 
 .category-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #c89b7b 0%, #d4a574 100%);
-  color: #ffffff;
-  padding: 0.5rem 1.25rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  background: var(--brand-color-light);
+  color: var(--brand-color-dark);
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.813rem;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-bottom: 1.5rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 1rem;
 }
 
 .pdf-title {
-  font-size: 2.75rem;
+  font-size: 2.25rem;
   font-weight: 800;
-  color: #2c3e50;
+  letter-spacing: -0.03em;
+  color: var(--text-primary, #1e293b);
   margin: 0 0 1rem 0;
   line-height: 1.2;
   letter-spacing: -1px;
@@ -75,7 +99,7 @@
 
 .pdf-subtitle {
   font-size: 1.25rem;
-  color: #555;
+  color: var(--text-secondary, #475569);
   line-height: 1.7;
   margin: 0 0 2rem 0;
 }
@@ -86,10 +110,10 @@
   flex-wrap: wrap;
   gap: 2rem;
   margin-bottom: 2rem;
-  padding: 1.5rem;
-  background-color: #f8f9fa;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card, #ffffff);
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid var(--border-subtle, #e7e5e4);
 }
 
 .meta-item {
@@ -104,7 +128,7 @@
 .meta-icon {
   width: 20px;
   height: 20px;
-  color: #c89b7b;
+  color: var(--brand-color);
 }
 
 // PDF Viewer Section
@@ -131,16 +155,16 @@
 
 .page-button {
   padding: 0.5rem 1rem;
-  background: #007bff;
+  background: var(--brand-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
 
   &:hover:not(.disabled) {
-    background: #0056b3;
+    background: var(--brand-color-dark);
   }
 
   &.disabled {
@@ -151,7 +175,7 @@
 
 .page-indicator {
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary, #1e293b);
 }
 
 pdf-viewer {
@@ -165,12 +189,12 @@ pdf-viewer {
 }
 
 .content-heading {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #2c3e50;
-  margin: 0 0 1.5rem 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 3px solid #c89b7b;
+  color: var(--text-primary, #1c1917);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--brand-color);
 }
 
 .content-body {
@@ -180,7 +204,7 @@ pdf-viewer {
 .content-text {
   font-size: 1.063rem;
   line-height: 1.8;
-  color: #444;
+  color: var(--text-secondary, #475569);
   white-space: pre-line;
   margin: 0;
 }
@@ -194,47 +218,47 @@ pdf-viewer {
 }
 
 .info-card {
-  background: #ffffff;
-  border: 2px solid #f0f0f0;
-  border-radius: 12px;
-  padding: 2rem;
-  transition: all 0.3s ease;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e7e5e4);
+  border-radius: var(--radius-md, 12px);
+  padding: 1.5rem;
+  transition: all 0.2s ease;
 
   &:hover {
-    border-color: #c89b7b;
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: var(--brand-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
 }
 
 .info-card-icon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #c89b7b 0%, #d4a574 100%);
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  background: var(--brand-color-light);
+  color: var(--brand-color);
+  border-radius: var(--radius-sm, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
 
   svg {
-    width: 28px;
-    height: 28px;
-    color: #ffffff;
+    width: 22px;
+    height: 22px;
+    color: var(--brand-color);
   }
 }
 
 .info-card-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-primary, #1e293b);
   margin: 0 0 0.75rem 0;
 }
 
 .info-card-text {
   font-size: 0.938rem;
   line-height: 1.6;
-  color: #666;
+  color: var(--text-muted, #64748b);
   margin: 0;
 }
 
@@ -250,36 +274,14 @@ pdf-viewer {
 
   h2 {
     font-size: 2rem;
-    color: #2c3e50;
+    color: var(--text-primary, #1e293b);
     margin-bottom: 1rem;
   }
 
   p {
     font-size: 1.125rem;
-    color: #7f8c8d;
+    color: var(--text-muted, #64748b);
     margin-bottom: 2rem;
-  }
-
-  .primary-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: linear-gradient(135deg, #c89b7b 0%, #d4a574 100%);
-    color: #ffffff;
-    border: none;
-    padding: 0.875rem 2rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(200, 155, 123, 0.3);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(200, 155, 123, 0.4);
-      background: linear-gradient(135deg, #d4a574 0%, #c89b7b 100%);
-    }
   }
 }
 

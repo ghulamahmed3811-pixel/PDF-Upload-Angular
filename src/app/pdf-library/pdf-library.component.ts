@@ -64,18 +64,15 @@ export class PdfLibraryComponent implements OnInit {
     this.loadPdfs();
     this.updateSectionFromUrl(this.router.url);
 
+    // Update section and admin on navigation - do NOT call loadPdfs here to avoid
+    // duplicate load on initial page load (data would flash then disappear)
+    // loadPdfs runs only from ngOnInit - when returning from /pdf/:id, component
+    // is recreated so ngOnInit runs again with fresh data
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        console.log('Navigation event, URL:', event.urlAfterRedirects);
-        this.checkAdminAccess(); // Re-check admin access on navigation
+        this.checkAdminAccess();
         this.updateSectionFromUrl(event.urlAfterRedirects);
-        // Reload PDFs when navigating back to library (from detail page or other routes)
-        const url = event.urlAfterRedirects.split('?')[0]; // Remove query params
-        if (url === '/' || url === '/recent' || url === '/about' || url === '/admin') {
-          console.log('Navigating to library route, reloading PDFs...');
-          this.loadPdfs();
-        }
       });
   }
 
@@ -152,12 +149,18 @@ export class PdfLibraryComponent implements OnInit {
     }
     this.error = null;
     
-    this.pdfService.getAllPdfs().subscribe({
+    this.pdfService.getAllPdfs().pipe(
+      finalize(() => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
       next: (pdfs: PdfData[]) => {
         console.log('PDFs loaded from backend:', pdfs.length);
         
-        // Convert backend PDF data to PdfResource format
-        const backendPdfs: PdfResource[] = pdfs.map(pdf => ({
+        // Convert backend PDF data to PdfResource format (handle null/undefined)
+        const safePdfs = Array.isArray(pdfs) ? pdfs : [];
+        const backendPdfs: PdfResource[] = safePdfs.map(pdf => ({
           id: pdf.id,
           title: this.formatTitle(pdf.originalName.replace(/\.pdf$/i, '')),
           description: `Uploaded PDF document. File size: ${this.formatFileSize(pdf.fileSize)}`,
@@ -236,13 +239,13 @@ export class PdfLibraryComponent implements OnInit {
         );
         this.pdfResources = uniquePdfs;
         this.isLoading = false;
-        this.cdr.detectChanges(); // Force UI update
+        this.cdr.detectChanges();
         console.log('Total PDFs displayed:', this.pdfResources.length);
       },
       error: (err) => {
-        console.error('Error loading PDFs:', err);
-        this.isLoading = false;
-        // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+          console.error('Error loading PDFs:', err);
+          this.isLoading = false;
+          // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
         setTimeout(() => {
           // Only set error if there's no admin auth error already
           if (!this.error || !this.error.includes('Admin authentication')) {
@@ -308,6 +311,7 @@ export class PdfLibraryComponent implements OnInit {
         
         // Combine existing uploaded PDFs with sample PDFs
         this.pdfResources = [...existingUploadedPdfs, ...samplePdfs];
+        this.cdr.detectChanges();
       }
     });
   }

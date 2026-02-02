@@ -13,6 +13,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
           [src]="safePdfUrl" 
           class="pdf-iframe"
           title="PDF Viewer"
+          scrolling="yes"
           (load)="onIframeLoad()"
           (error)="onIframeError()">
         </iframe>
@@ -28,7 +29,9 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
       width: 100%;
       height: calc(100vh - 300px);
       min-height: 600px;
-      overflow: hidden;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y pan-x;
       border: none;
       background: white;
     }
@@ -36,8 +39,34 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
     .pdf-iframe {
       width: 100%;
       height: 100%;
+      min-height: 600px;
       border: none;
       display: block;
+    }
+
+    @media (max-width: 768px) {
+      .pdf-iframe-container {
+        min-height: 400px;
+        height: calc(100vh - 280px);
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y pan-x;
+      }
+      
+      .pdf-iframe {
+        min-height: 400px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .pdf-iframe-container {
+        min-height: 350px;
+        height: calc(100vh - 260px);
+      }
+      
+      .pdf-iframe {
+        min-height: 350px;
+      }
     }
   `]
 })
