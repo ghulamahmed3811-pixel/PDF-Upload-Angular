@@ -8,16 +8,26 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
   imports: [CommonModule],
   template: `
     @if (pdfSrc && typeof pdfSrc === 'string') {
-      <div class="pdf-iframe-container">
-        <iframe 
-          [src]="safePdfUrl" 
-          class="pdf-iframe"
-          title="PDF Viewer"
-          scrolling="yes"
-          (load)="onIframeLoad()"
-          (error)="onIframeError()">
-        </iframe>
-      </div>
+      @if (isIos) {
+        <div class="pdf-ios-fallback">
+          <p class="pdf-ios-message">PDFs don't scroll properly in Safari on iPhone. Open the PDF in a new tab for the best experience.</p>
+          <a [href]="pdfSrc" target="_blank" rel="noopener noreferrer" class="pdf-open-new-tab">
+            Open PDF in New Tab
+          </a>
+          <p class="pdf-ios-hint">The PDF will open in Safari where you can scroll through all pages.</p>
+        </div>
+      } @else {
+        <div class="pdf-iframe-container">
+          <iframe 
+            [src]="safePdfUrl" 
+            class="pdf-iframe"
+            title="PDF Viewer"
+            scrolling="yes"
+            (load)="onIframeLoad()"
+            (error)="onIframeError()">
+          </iframe>
+        </div>
+      }
     } @else {
       <div style="text-align: center; padding: 3rem; color: #666;">
         <p>No PDF source available</p>
@@ -68,6 +78,46 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
         min-height: 350px;
       }
     }
+
+    /* iOS fallback - Safari can't scroll PDFs in iframe */
+    .pdf-ios-fallback {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      background: #f8fafc;
+      border: 2px dashed #e2e8f0;
+      border-radius: 12px;
+    }
+
+    .pdf-ios-message {
+      margin: 0 0 1rem;
+      color: #475569;
+      font-size: 0.938rem;
+      line-height: 1.5;
+    }
+
+    .pdf-open-new-tab {
+      display: inline-block;
+      padding: 0.875rem 1.75rem;
+      background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .pdf-open-new-tab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(13, 148, 136, 0.4);
+    }
+
+    .pdf-ios-hint {
+      margin: 1rem 0 0;
+      font-size: 0.813rem;
+      color: #94a3b8;
+    }
   `]
 })
 export class PdfViewerWrapperComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
@@ -83,7 +133,8 @@ export class PdfViewerWrapperComponent implements OnInit, AfterViewInit, OnDestr
   @ViewChild('pdfViewerContainer', { read: ViewContainerRef }) pdfViewerContainer!: ViewContainerRef;
 
   isBrowser = false;
-  useIframe = true; // Use iframe by default to avoid SSR issues
+  isIos = false;
+  useIframe = true;
   private pdfViewerComponentRef: ComponentRef<any> | null = null;
   safePdfUrl: SafeResourceUrl | null = null;
 
@@ -92,11 +143,13 @@ export class PdfViewerWrapperComponent implements OnInit, AfterViewInit, OnDestr
     private sanitizer: DomSanitizer
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
+    this.isIos = this.isBrowser && (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
   }
 
   ngOnInit(): void {
-    // Use iframe for now to avoid SSR issues with ng2-pdf-viewer
-    // Can be changed to false to use ng2-pdf-viewer if needed (but requires SSR exclusion)
     this.useIframe = true;
     this.updateSafeUrl();
   }
