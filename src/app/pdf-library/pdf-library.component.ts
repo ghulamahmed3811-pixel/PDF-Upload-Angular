@@ -82,22 +82,19 @@ export class PdfLibraryComponent implements OnInit {
    * When navigating away from /admin, admin buttons should disappear
    */
   private checkAdminAccess(): void {
-    const currentUrl = this.router.url;
+    const currentUrl = this.router.url.split('?')[0];
     console.log('Checking admin access for URL:', currentUrl);
     
-    // Check if we're in admin mode via sessionStorage (more reliable than URL check due to guard redirect)
-    const onAdminRoute = this.isBrowser && sessionStorage.getItem('onAdminRoute') === 'true';
+    // URL is the source of truth - admin only when /admin is in the URL
+    const isOnAdminUrl = currentUrl === '/admin' || currentUrl.startsWith('/admin');
     
-    // If on /admin route or admin mode is active, authenticate with backend and set admin status
-    if (currentUrl === '/admin' || currentUrl.startsWith('/admin') || onAdminRoute) {
+    if (isOnAdminUrl) {
       console.log('Admin route detected, authenticating with backend...');
       
-      // Call backend to authenticate admin
       this.pdfService.authenticateAdmin('admin').subscribe({
         next: (response) => {
           console.log('✅ Backend admin authentication successful');
           this.adminService.setAdminStatus('admin');
-          // Store flag that we're on admin route (for navigation from PDF detail)
           if (this.isBrowser) {
             sessionStorage.setItem('onAdminRoute', 'true');
           }
@@ -117,7 +114,7 @@ export class PdfLibraryComponent implements OnInit {
       return;
     }
     
-    // For all other routes, clear admin status (hide admin buttons)
+    // Not on /admin - clear admin status immediately
     // This ensures admin buttons only appear when on /admin route
     const currentStatus = this.adminService.getIsAdmin();
     if (currentStatus) {
